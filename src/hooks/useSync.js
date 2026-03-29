@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { syncAll, getPendingCount } from '../db/syncService';
+import { syncAll, getPendingCount, initRealtimeSubscription } from '../db/syncService';
 import { isSupabaseConfigured } from '../db/supabase';
 
 // Sync states: 'idle' | 'syncing' | 'synced' | 'pending' | 'error' | 'offline' | 'disabled'
@@ -7,6 +7,7 @@ export default function useSync() {
   const [syncState, setSyncState] = useState(isSupabaseConfigured() ? 'idle' : 'disabled');
   const [pendingCount, setPendingCount] = useState(0);
   const [lastSync, setLastSync] = useState(null);
+  const [syncError, setSyncError] = useState(null); // mensaje de error visible al usuario
   const intervalRef = useRef(null);
 
   const doSync = useCallback(async () => {
@@ -17,20 +18,23 @@ export default function useSync() {
     }
 
     setSyncState('syncing');
+    setSyncError(null);
     try {
       const result = await syncAll();
       if (result.success) {
         setSyncState('synced');
         setLastSync(new Date());
         setPendingCount(0);
-        // Reset to idle after 3 seconds
+        setSyncError(null);
         setTimeout(() => setSyncState('idle'), 3000);
       } else {
         setSyncState('error');
+        setSyncError(result.message || 'Error al sincronizar. El registro puede no estar visible en el bot aún.');
       }
     } catch (err) {
       console.error('Sync error:', err);
       setSyncState('error');
+      setSyncError('Error de conexión. El registro puede no estar visible en el bot hasta que se sincronice.');
     }
   }, []);
 
@@ -43,33 +47,43 @@ export default function useSync() {
     }
   }, []);
 
-  // Auto-sync every 60 seconds
+  // Efecto Principal de Sincronización
   useEffect(() => {
     if (!isSupabaseConfigured()) return;
 
-    // Initial sync after 2 seconds
-    const timeout = setTimeout(() => doSync(), 2000);
+    console.log('[SYNC] Hook inicializado');
+    initRealtimeSubscription();
 
-    // Periodic sync
+    // Sync completo al abrir la app
+    const initialTimeout = setTimeout(() => doSync(), 2000);
+
+    // Fallback sync periódico (5 minutos)
     intervalRef.current = setInterval(() => {
       if (navigator.onLine) doSync();
-    }, 60000);
+    }, 300000);
+
+    // Push inmediato cuando cambia algo local (debounce reducido a 500ms)
+    let pushTimeout = null;
+    function handleLocalDbPush() {
+      if (navigator.onLine) {
+        if (pushTimeout) clearTimeout(pushTimeout);
+        pushTimeout = setTimeout(() => doSync(), 500);
+      }
+    }
+    window.addEventListener('local-db-changed', handleLocalDbPush);
 
     return () => {
-      clearTimeout(timeout);
+      clearTimeout(initialTimeout);
       clearInterval(intervalRef.current);
+      if (pushTimeout) clearTimeout(pushTimeout);
+      window.removeEventListener('local-db-changed', handleLocalDbPush);
     };
   }, [doSync]);
 
-  // Listen for online/offline events
+  // Escuchar online/offline
   useEffect(() => {
-    function handleOnline() {
-      doSync();
-    }
-    function handleOffline() {
-      setSyncState('offline');
-    }
-
+    function handleOnline() { doSync(); }
+    function handleOffline() { setSyncState('offline'); }
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
@@ -82,6 +96,7 @@ export default function useSync() {
     syncState,
     pendingCount,
     lastSync,
+    syncError,
     doSync,
     checkPending,
   };

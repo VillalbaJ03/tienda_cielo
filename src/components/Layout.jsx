@@ -14,7 +14,7 @@ const syncConfig = {
 };
 
 export default function Layout() {
-  const { syncState, doSync } = useSync();
+  const { syncState, syncError, doSync } = useSync();
   const isOnline = navigator.onLine;
 
   const config = syncConfig[syncState] || syncConfig.idle;
@@ -31,6 +31,25 @@ export default function Layout() {
         <Icon size={10} style={config.spin ? { animation: 'spin 1s linear infinite' } : {}} />
         <span>{syncState === 'disabled' ? (isOnline ? 'CONECTADO' : 'SIN CONEXIÓN') : config.text}</span>
       </div>
+      {syncError && (
+        <div style={{
+          background: '#fef2f2',
+          borderBottom: '1px solid #fecaca',
+          padding: '0.5rem 1rem',
+          fontSize: '0.75rem',
+          color: '#dc2626',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+        }}>
+          <AlertCircle size={13} />
+          <span><strong>Sin sync:</strong> {syncError}</span>
+          <button
+            onClick={doSync}
+            style={{ marginLeft: 'auto', fontSize: '0.7rem', color: '#dc2626', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+          >Reintentar</button>
+        </div>
+      )}
       <main className="page">
         <Outlet />
       </main>
