@@ -125,7 +125,7 @@ export async function pullFromCloud() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return { tableName, data, error, lastSyncKey, lastSyncTime };
+      return { tableName, data, error, lastSyncKey, lastSyncTime, orderCol };
     });
 
     const responses = await Promise.all(fetchPromises);
@@ -135,7 +135,7 @@ export async function pullFromCloud() {
       const response = responses.find(r => r.tableName === tableName);
       if (!response) continue;
 
-      const { data, error, lastSyncKey, lastSyncTime } = response;
+      const { data, error, lastSyncKey, lastSyncTime, orderCol } = response;
       if (error) {
         console.error(`Error al descargar ${tableName}:`, error);
         continue;
