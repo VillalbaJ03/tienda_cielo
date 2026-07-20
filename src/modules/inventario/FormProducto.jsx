@@ -22,6 +22,7 @@ export default function FormProducto() {
   const [guardando, setGuardando] = useState(false);
   const [inactivo, setInactivo] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [busquedaFallida, setBusquedaFallida] = useState('');
   const esEdicion = !!id;
 
   const cargarDatos = useCallback(async () => {
@@ -48,28 +49,46 @@ export default function FormProducto() {
 
   function handleChange(e) { setForm((prev) => ({ ...prev, [e.target.name]: e.target.value })); }
 
+  // Catálogos abiertos y gratuitos, en orden de probabilidad:
+  // alimentos → productos generales (limpieza, etc.) → cuidado personal
+  const CATALOGOS = [
+    'https://world.openfoodfacts.org',
+    'https://world.openproductsfacts.org',
+    'https://world.openbeautyfacts.org',
+  ];
+
+  async function buscarEnCatalogos(codigo) {
+    for (const base of CATALOGOS) {
+      try {
+        const res = await fetch(
+          `${base}/api/v2/product/${encodeURIComponent(codigo)}.json?fields=product_name,product_name_es,brands,quantity`
+        );
+        if (!res.ok) continue;
+        const data = await res.json();
+        const p = data.status === 1 ? data.product : null;
+        const nombre = p ? (p.product_name_es || p.product_name || '') : '';
+        if (nombre) {
+          const marca = (p.brands || '').split(',')[0].trim();
+          const conMarca = marca && !nombre.toLowerCase().includes(marca.toLowerCase()) ? `${marca} ${nombre}` : nombre;
+          return [conMarca, p.quantity].filter(Boolean).join(' ');
+        }
+      } catch { /* catálogo caído o sin conexión: probar el siguiente */ }
+    }
+    return null;
+  }
+
   async function handleCodigoEscaneado(codigo) {
     setShowScanner(false);
     setForm((prev) => ({ ...prev, codigo }));
-    try {
-      const res = await fetch(
-        `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(codigo)}.json?fields=product_name,product_name_es,brands,quantity`
-      );
-      if (!res.ok) throw new Error('sin respuesta');
-      const data = await res.json();
-      const p = data.status === 1 ? data.product : null;
-      const base = p ? (p.product_name_es || p.product_name || '') : '';
-      if (base) {
-        const marca = (p.brands || '').split(',')[0].trim();
-        const conMarca = marca && !base.toLowerCase().includes(marca.toLowerCase()) ? `${marca} ${base}` : base;
-        const completo = [conMarca, p.quantity].filter(Boolean).join(' ');
-        setForm((prev) => (prev.nombre ? prev : { ...prev, nombre: completo }));
-        toast(`Encontrado: ${completo}`);
-      } else {
-        toast('Código guardado. No está en el catálogo público: escribe el nombre', 'error');
-      }
-    } catch {
-      toast('Código guardado. Sin conexión al catálogo: escribe el nombre', 'error');
+    setBusquedaFallida('');
+    toast('Buscando en los catálogos...');
+    const nombre = await buscarEnCatalogos(codigo);
+    if (nombre) {
+      setForm((prev) => (prev.nombre ? prev : { ...prev, nombre }));
+      toast(`Encontrado: ${nombre}`);
+    } else {
+      setBusquedaFallida(codigo);
+      toast('No está en los catálogos públicos: escribe el nombre o búscalo en Google', 'error');
     }
   }
 
@@ -142,7 +161,22 @@ export default function FormProducto() {
               <ScanLine size={16} />
             </button>
           </div>
-          <p className="form-hint">Escanea el código y se autocompleta el nombre si está en el catálogo público.</p>
+          {busquedaFallida ? (
+            <p className="form-hint">
+              No apareció en los catálogos públicos.{' '}
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(busquedaFallida)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: 'var(--color-accent)', fontWeight: 500 }}
+              >
+                Buscar {busquedaFallida} en Google
+              </a>{' '}
+              y copia el nombre.
+            </p>
+          ) : (
+            <p className="form-hint">Escanea el código y se autocompleta el nombre si está en los catálogos públicos.</p>
+          )}
         </div>
         <div className="field field-row">
           <div>

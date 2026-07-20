@@ -21,7 +21,8 @@
 - [ ] Cierre de caja con desglose por método de pago (efectivo vs. transferencia vs. fiado).
 - [ ] Recordatorios de cobro de fiados (lista de deudores con antigüedad de la deuda; compartir recordatorio por WhatsApp).
 - [ ] Compras a proveedores que alimenten el stock (hoy los proveedores son solo un directorio).
-- [ ] **Factura de compra con IA**: foto de la factura del proveedor → un modelo de visión (p. ej. Claude API) extrae productos, cantidades y costos → vista previa → crea/actualiza stock de golpe. Requiere un pequeño backend (una función serverless) que guarde la API key y reciba la imagen — nunca poner la key de IA en el frontend. Costo estimado: centavos por factura. Reutilizar la vista previa de la importación CSV.
+- [ ] **Reconocimiento de productos por foto con IA**: cuando el código de barras no está en los catálogos abiertos (frecuente en productos ecuatorianos), tomar foto del empaque → un modelo de visión (Gemini tiene capa gratuita; Claude cuesta centavos) devuelve nombre, marca y presentación. Requiere una mini-función en la nube que guarde la API key — nunca ponerla en el frontend.
+- [ ] **Factura de compra con IA**: foto de la factura del proveedor → el modelo de visión extrae productos, cantidades y costos → vista previa (reutilizar la de la importación CSV) → crea/actualiza stock de golpe. Mismo backend que el punto anterior.
 
 ## Prioridad 4 — Pulido
 

@@ -2,6 +2,12 @@
 
 Registro cronológico de lo que se ha hecho en Tienda Cielo. La visión y lo que falta está en [ROADMAP.md](ROADMAP.md); las reglas visuales en [DISENO.md](DISENO.md).
 
+## 2026-07-19 — Mejor acierto del escáner
+
+- La búsqueda por código consulta ahora **3 catálogos abiertos en cascada**: Open Food Facts → Open Products Facts (limpieza, hogar) → Open Beauty Facts (cuidado personal). Verificado contra las APIs reales.
+- Si ningún catálogo tiene el producto, el formulario ofrece un enlace directo **"Buscar &lt;código&gt; en Google"** para copiar el nombre a mano.
+- Contexto: los catálogos son colaborativos y la cobertura de productos ecuatorianos es limitada — el registro manual solo duele la primera vez; después el producto vive en el catálogo propio. El plan con IA por foto quedó en el roadmap.
+
 ## 2026-07-19 — Publicación web + pull request
 
 - **Deploy a Firebase Hosting**: https://tienda-cielo-94466.web.app ya sirve la v2 (antes tenía la versión inicial sin PWA ni sync funcional). `firebase deploy --only hosting` con `firebase.json`/`.firebaserc` en el repo; verificado en producción con el chip "Sincronizado" contra la base real. Con HTTPS, el escáner de cámara funciona desde el teléfono.
