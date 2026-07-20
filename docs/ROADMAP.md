@@ -21,7 +21,7 @@
 - [ ] Cierre de caja con desglose por método de pago (efectivo vs. transferencia vs. fiado).
 - [ ] Recordatorios de cobro de fiados (lista de deudores con antigüedad de la deuda; compartir recordatorio por WhatsApp).
 - [ ] Compras a proveedores que alimenten el stock (hoy los proveedores son solo un directorio).
-- [ ] **Reconocimiento de productos por foto con IA**: cuando el código de barras no está en los catálogos abiertos (frecuente en productos ecuatorianos), tomar foto del empaque → un modelo de visión (Gemini tiene capa gratuita; Claude cuesta centavos) devuelve nombre, marca y presentación. Requiere una mini-función en la nube que guarde la API key — nunca ponerla en el frontend.
+- [x] **Reconocimiento de productos por foto con IA**: botón de cámara en Nuevo producto → Edge Function `reconocer-producto` en Supabase → Gemini (`gemini-flash-latest`, capa gratuita) devuelve el nombre. La key vive en el secreto `GEMINI_API_KEY`. *Hecho 2026-07-19.*
 - [ ] **Factura de compra con IA**: foto de la factura del proveedor → el modelo de visión extrae productos, cantidades y costos → vista previa (reutilizar la de la importación CSV) → crea/actualiza stock de golpe. Mismo backend que el punto anterior.
 
 ## Prioridad 4 — Pulido

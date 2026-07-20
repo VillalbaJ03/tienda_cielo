@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
     if (!apiKey) return json({ error: 'GEMINI_API_KEY no configurada en los secretos' }, 500);
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      // Alias que siempre apunta al modelo flash vigente (evita quedar
+      // atados a una versión que Google retire)
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

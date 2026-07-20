@@ -2,6 +2,14 @@
 
 Registro cronológico de lo que se ha hecho en Tienda Cielo. La visión y lo que falta está en [ROADMAP.md](ROADMAP.md); las reglas visuales en [DISENO.md](DISENO.md).
 
+## 2026-07-19 — Identificación de productos por foto con IA ✔
+
+- **Edge Function `reconocer-producto`** desplegada en Supabase (capa gratuita, 500K invocaciones/mes): recibe la foto del empaque (JPEG base64, comprimida a 1024px en el cliente) y consulta **Gemini** con el alias `gemini-flash-latest` (siempre el modelo vigente). La API key vive en el secreto `GEMINI_API_KEY` del proyecto, nunca en el frontend.
+- En **Nuevo producto** hay un botón de cámara junto al nombre: foto al empaque → el nombre se llena solo.
+- Verificado end-to-end en producción: foto real de una Coca-Cola → `{"nombre":"Coca-Cola Original"}`.
+- Nota: las API keys nuevas de Google AI Studio empiezan con `AQ.` (ya no `AIza`).
+- Operación: cambios en la función se publican con `supabase functions deploy reconocer-producto --project-ref psykimlermiclwnfiaub --no-verify-jwt`; la sesión del CLI quedó iniciada en esta máquina (`%USERPROFILE%\.supabase-cli\supabase.exe`, ya en el PATH).
+
 ## 2026-07-19 — Mejor acierto del escáner
 
 - La búsqueda por código consulta ahora **3 catálogos abiertos en cascada**: Open Food Facts → Open Products Facts (limpieza, hogar) → Open Beauty Facts (cuidado personal). Verificado contra las APIs reales.
