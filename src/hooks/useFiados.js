@@ -5,8 +5,6 @@ import {
   crearFiado,
   registrarPagoFiado,
   obtenerFiadosPendientes,
-  obtenerFiadosCliente,
-  obtenerPagosFiado,
 } from '../db/database';
 
 export default function useFiados() {

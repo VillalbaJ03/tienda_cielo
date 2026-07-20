@@ -30,6 +30,7 @@ export async function pushToCloud() {
   for (const tableName of SYNC_TABLES) {
     try {
       const table = db[tableName];
+      if (!table) continue; // tabla no definida en el esquema local
       const unsynced = await table.filter((r) => !r.synced).toArray();
 
       if (unsynced.length === 0) continue;
@@ -123,8 +124,9 @@ export async function pullFromCloud() {
       let query = supabase.from(tableName).select('*').order(orderCol, { ascending: true });
       if (lastSyncTime) query = query.gt(orderCol, lastSyncTime);
 
+      // No lanzar: un error en una tabla (p. ej. columna updated_at faltante)
+      // no debe abortar la descarga de las demás.
       const { data, error } = await query;
-      if (error) throw error;
       return { tableName, data, error, lastSyncKey, lastSyncTime, orderCol };
     });
 
@@ -143,6 +145,7 @@ export async function pullFromCloud() {
       if (!data || data.length === 0) continue;
 
       const table = db[tableName];
+      if (!table) continue; // tabla no definida en el esquema local
       let maxDate = lastSyncTime;
 
       for (const record of data) {
@@ -224,9 +227,13 @@ export async function getPendingCount() {
   if (!isSupabaseConfigured()) return 0;
   let total = 0;
   for (const tableName of SYNC_TABLES) {
+    const table = db[tableName];
+    if (!table) continue;
     try {
-      total += await db[tableName].filter((r) => !r.synced).count();
-    } catch (e) {}
+      total += await table.filter((r) => !r.synced).count();
+    } catch {
+      // si la tabla local falla, no bloquear el conteo de pendientes
+    }
   }
   return total;
 }
@@ -246,8 +253,9 @@ export function initRealtimeSubscription() {
       
       const { table: tableName, eventType, new: newRecord, old: oldRecord } = payload;
       if (!SYNC_TABLES.includes(tableName)) return;
-      
+
       const table = db[tableName];
+      if (!table) return; // tabla no definida en el esquema local
 
       try {
         if (eventType === 'INSERT') {

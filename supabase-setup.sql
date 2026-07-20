@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS ventas (
   metodo_pago TEXT DEFAULT 'efectivo',
   estado TEXT DEFAULT 'completada',
   notas TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Detalle de venta
@@ -41,7 +42,9 @@ CREATE TABLE IF NOT EXISTS detalle_venta (
   producto_id INTEGER,
   cantidad INTEGER DEFAULT 1,
   precio_unitario DECIMAL(10,2) DEFAULT 0,
-  subtotal DECIMAL(10,2) DEFAULT 0
+  subtotal DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Clientes
@@ -52,7 +55,8 @@ CREATE TABLE IF NOT EXISTS clientes (
   telefono TEXT,
   limite_credito DECIMAL(10,2) DEFAULT 0,
   deuda_total DECIMAL(10,2) DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Fiados
@@ -64,7 +68,8 @@ CREATE TABLE IF NOT EXISTS fiados (
   total DECIMAL(10,2) DEFAULT 0,
   saldo_pendiente DECIMAL(10,2) DEFAULT 0,
   estado TEXT DEFAULT 'pendiente',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Pagos de fiado
@@ -73,7 +78,9 @@ CREATE TABLE IF NOT EXISTS pagos_fiado (
   local_id INTEGER,
   fiado_id INTEGER,
   fecha TIMESTAMPTZ NOT NULL,
-  monto DECIMAL(10,2) DEFAULT 0
+  monto DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Gastos
@@ -83,7 +90,9 @@ CREATE TABLE IF NOT EXISTS gastos (
   categoria TEXT DEFAULT 'Otros',
   descripcion TEXT,
   monto DECIMAL(10,2) DEFAULT 0,
-  fecha TIMESTAMPTZ NOT NULL
+  fecha TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Caja diaria
@@ -94,7 +103,9 @@ CREATE TABLE IF NOT EXISTS caja_diaria (
   apertura DECIMAL(10,2) DEFAULT 0,
   cierre TIMESTAMPTZ,
   total_ventas DECIMAL(10,2) DEFAULT 0,
-  total_gastos DECIMAL(10,2) DEFAULT 0
+  total_gastos DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Proveedores
@@ -105,27 +116,87 @@ CREATE TABLE IF NOT EXISTS proveedores (
   ruc TEXT,
   telefono TEXT,
   email TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Habilitar RLS (Row Level Security) - PERMISIVO para inicio
-ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ventas ENABLE ROW LEVEL SECURITY;
-ALTER TABLE detalle_venta ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fiados ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pagos_fiado ENABLE ROW LEVEL SECURITY;
-ALTER TABLE gastos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE caja_diaria ENABLE ROW LEVEL SECURITY;
-ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
+-- =============================================
+-- RLS con políticas permisivas (idempotente).
+-- ⚠️ "Allow all" = cualquiera con la publishable key lee y escribe.
+-- Suficiente para arrancar; endurecer con Auth (ver docs/ROADMAP.md).
+-- Incluye las tablas del bot si existen.
+-- =============================================
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['productos','ventas','detalle_venta','clientes','fiados','pagos_fiado','gastos','caja_diaria','proveedores','movimientos_clientes','registro_ganancias_bot']
+  LOOP
+    IF to_regclass('public.' || t) IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
+      EXECUTE format('DROP POLICY IF EXISTS "Allow all" ON %I', t);
+      EXECUTE format('CREATE POLICY "Allow all" ON %I FOR ALL USING (true) WITH CHECK (true)', t);
+    END IF;
+  END LOOP;
+END $$;
 
--- Políticas permisivas (acceso completo con anon key)
-CREATE POLICY "Allow all" ON productos FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON ventas FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON detalle_venta FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON clientes FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON fiados FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON pagos_fiado FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON gastos FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON caja_diaria FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON proveedores FOR ALL USING (true) WITH CHECK (true);
+-- =============================================
+-- Migración para bases existentes:
+-- la app ordena el pull por updated_at en TODAS las tablas
+-- =============================================
+ALTER TABLE productos     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE ventas        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE detalle_venta ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE clientes      ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE fiados        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE pagos_fiado   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE pagos_fiado   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE gastos        ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE gastos        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE caja_diaria   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE caja_diaria   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE proveedores   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Soft-delete: la app desactiva registros en lugar de borrarlos
+ALTER TABLE proveedores   ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;
+ALTER TABLE clientes      ADD COLUMN IF NOT EXISTS activo BOOLEAN DEFAULT true;
+
+-- Mantener updated_at al día aunque escriba otro cliente (ej. el bot)
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['productos','ventas','detalle_venta','clientes','fiados','pagos_fiado','gastos','caja_diaria','proveedores']
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS trg_set_updated_at ON %I', t);
+    EXECUTE format('CREATE TRIGGER trg_set_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION set_updated_at()', t);
+  END LOOP;
+END $$;
+
+-- =============================================
+-- Realtime: las tablas deben estar en la publicación
+-- para que la app reciba cambios en vivo
+-- =============================================
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['productos','ventas','detalle_venta','clientes','fiados','pagos_fiado','gastos','caja_diaria','proveedores','movimientos_clientes','registro_ganancias_bot']
+  LOOP
+    IF to_regclass('public.' || t) IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', t);
+    END IF;
+  END LOOP;
+END $$;

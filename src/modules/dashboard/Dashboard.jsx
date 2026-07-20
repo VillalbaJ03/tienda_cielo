@@ -1,17 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  TrendingUp,
   ShoppingCart,
   AlertTriangle,
   ArrowRight,
-  DollarSign,
-  ArrowDownCircle,
-  ArrowUpCircle,
   Package,
-  Zap,
-  Cloud,
-  Users,
   Wallet,
   Receipt,
   Clock,
@@ -21,13 +14,6 @@ import { formatMoneda, formatFechaHora } from '../../utils/formatters';
 
 const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-
-function getSaludo() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Buenos días';
-  if (h < 18) return 'Buenas tardes';
-  return 'Buenas noches';
-}
 
 export default function Dashboard() {
   const [stats, setStats] = useState({ totalVentas: 0, numTransacciones: 0, totalGastos: 0, balance: 0 });
@@ -61,139 +47,116 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* ── Brand Header ── */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.15rem' }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: '0.5rem',
-            background: 'linear-gradient(135deg, #059669, #34d399)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(5,150,105,0.2)',
-          }}>
-            <Cloud size={17} color="#fff" strokeWidth={2.5} />
+      <div className="page-header" style={{ marginBottom: '1rem' }}>
+        <div>
+          <h1 className="page-title">Resumen</h1>
+          <p className="page-subtitle">{fecha}</p>
+        </div>
+      </div>
+
+      {/* KPI del día */}
+      <div className="card section" style={{ padding: '1rem' }}>
+        <div className="stat-label">Ventas de hoy</div>
+        <div className="stat-hero">{formatMoneda(stats.totalVentas)}</div>
+
+        <div className="divider" style={{ margin: '0.875rem 0' }} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+          <div>
+            <div className="stat-label">Transacciones</div>
+            <div className="stat-value" style={{ fontSize: '1rem' }}>{stats.numTransacciones}</div>
           </div>
           <div>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              Tienda Cielo
-            </h1>
+            <div className="stat-label">Gastos</div>
+            <div className="stat-value" style={{ fontSize: '1rem' }}>{formatMoneda(stats.totalGastos)}</div>
           </div>
-        </div>
-        <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-          {getSaludo()} · {fecha}
-        </p>
-      </div>
-
-      {/* ── Stat Cards ── */}
-      <div className="stagger" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1.25rem' }}>
-        <div className="stat-card">
-          <div className="stat-icon green"><ArrowUpCircle size={18} /></div>
-          <div className="stat-label">Ventas hoy</div>
-          <div className="stat-value" style={{ color: 'var(--color-success)' }}>{formatMoneda(stats.totalVentas)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon blue"><Zap size={18} /></div>
-          <div className="stat-label">Transacciones</div>
-          <div className="stat-value">{stats.numTransacciones}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon red"><ArrowDownCircle size={18} /></div>
-          <div className="stat-label">Gastos hoy</div>
-          <div className="stat-value" style={{ color: 'var(--color-danger)' }}>{formatMoneda(stats.totalGastos)}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon green"><DollarSign size={18} /></div>
-          <div className="stat-label">Balance</div>
-          <div className="stat-value" style={{ color: stats.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-            {formatMoneda(stats.balance)}
+          <div>
+            <div className="stat-label">Balance</div>
+            <div className="stat-value" style={{
+              fontSize: '1rem',
+              color: stats.balance < 0 ? 'var(--color-danger)' : 'var(--color-positive)',
+            }}>
+              {formatMoneda(stats.balance)}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Quick Actions ── */}
-      <div style={{ marginBottom: '1.25rem' }}>
+      {/* Acceso rápido */}
+      <div className="section">
         <div className="section-header">
           <h2 className="section-title">Acceso rápido</h2>
         </div>
         <div className="quick-actions">
           <Link to="/ventas" className="quick-action">
-            <div className="quick-action-icon" style={{ background: '#ecfdf5', color: '#059669' }}><ShoppingCart size={20} /></div>
+            <ShoppingCart size={20} strokeWidth={1.8} />
             <span>Vender</span>
           </Link>
           <Link to="/inventario/nuevo" className="quick-action">
-            <div className="quick-action-icon" style={{ background: '#eef2ff', color: '#6366f1' }}><Package size={20} /></div>
+            <Package size={20} strokeWidth={1.8} />
             <span>Producto</span>
           </Link>
           <Link to="/gastos" className="quick-action">
-            <div className="quick-action-icon" style={{ background: '#fff7ed', color: '#f97316' }}><Receipt size={20} /></div>
+            <Receipt size={20} strokeWidth={1.8} />
             <span>Gasto</span>
           </Link>
           <Link to="/caja" className="quick-action">
-            <div className="quick-action-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}><Wallet size={20} /></div>
+            <Wallet size={20} strokeWidth={1.8} />
             <span>Caja</span>
           </Link>
         </div>
       </div>
 
-      {/* ── Low Stock Alert ── */}
+      {/* Alerta de stock bajo */}
       {productosBajoStock.length > 0 && (
-        <div style={{ marginBottom: '1.25rem' }}>
-          <div className="card" style={{ borderColor: '#fde68a', background: '#fffbeb', padding: '0.75rem 0.875rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-              <AlertTriangle size={15} color="#b45309" />
-              <span style={{ fontWeight: 700, fontSize: '0.82rem', color: '#92400e' }}>
-                {productosBajoStock.length} producto{productosBajoStock.length !== 1 ? 's' : ''} con stock bajo
+        <div className="section">
+          <div className="card">
+            <div className="list-row" style={{ paddingBottom: '0.5rem' }}>
+              <AlertTriangle size={15} style={{ color: 'var(--color-warning)', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-ink-2)' }}>
+                Stock bajo · {productosBajoStock.length} producto{productosBajoStock.length !== 1 ? 's' : ''}
               </span>
+              <Link to="/inventario" className="section-link" style={{ marginLeft: 'auto' }}>
+                Ver inventario
+              </Link>
             </div>
-            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-              {productosBajoStock.map((p) => (
-                <span key={p.id} className="badge" style={{
-                  background: p.stock === 0 ? 'var(--color-danger-dim)' : '#fef3c7',
-                  color: p.stock === 0 ? 'var(--color-danger)' : '#92400e',
-                  fontSize: '0.68rem',
-                }}>
-                  {p.nombre} ({p.stock})
+            {productosBajoStock.map((p) => (
+              <div key={p.id} className="list-row" style={{ padding: '0.55rem 1rem' }}>
+                <span className="row-title" style={{ flex: 1, fontWeight: 450 }}>{p.nombre}</span>
+                <span className={`badge ${p.stock === 0 ? 'badge-danger' : 'badge-warning'} num`}>
+                  {p.stock === 0 ? 'Agotado' : `${p.stock} uds.`}
                 </span>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── Recent Sales ── */}
-      <div>
+      {/* Últimas ventas */}
+      <div className="section">
         <div className="section-header">
-          <h2 className="section-title"><TrendingUp size={14} /> Últimas ventas</h2>
+          <h2 className="section-title">Últimas ventas</h2>
           <Link to="/historial-ventas" className="section-link">Ver todo <ArrowRight size={12} /></Link>
         </div>
 
         {ultimasVentas.length === 0 ? (
-          <div className="card" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-            <ShoppingCart size={36} style={{ margin: '0 auto 0.5rem', opacity: 0.15, color: 'var(--color-text-muted)' }} />
-            <p style={{ fontSize: '0.88rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>No hay ventas hoy</p>
-            <Link to="/ventas" className="btn btn-primary btn-sm">
-              <ShoppingCart size={13} /> Ir al Punto de Venta
-            </Link>
+          <div className="card empty-state" style={{ padding: '2rem 1rem' }}>
+            <ShoppingCart size={28} strokeWidth={1.5} />
+            <p>No hay ventas hoy</p>
+            <Link to="/ventas" className="btn btn-primary btn-sm">Ir al punto de venta</Link>
           </div>
         ) : (
-          <div className="card" style={{ padding: 0 }}>
-            {ultimasVentas.map((v, i) => (
-              <div key={v.id} className="list-item" style={{ padding: '0.7rem 0.875rem' }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: '0.5rem', flexShrink: 0,
-                  background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <ShoppingCart size={15} color="#059669" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Venta #{v.id}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Clock size={10} /> {formatFechaHora(v.fecha)}
-                    <span className="badge badge-neutral" style={{ marginLeft: '0.15rem' }}>{v.metodo_pago}</span>
+          <div className="card">
+            {ultimasVentas.map((v) => (
+              <div key={v.id} className="list-row">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="row-title">Venta #{v.id}</div>
+                  <div className="row-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Clock size={11} /> {formatFechaHora(v.fecha)}
+                    <span className="badge badge-neutral">{v.metodo_pago}</span>
                   </div>
                 </div>
-                <div style={{ fontWeight: 700, color: 'var(--color-success)', fontSize: '0.92rem' }}>
-                  +{formatMoneda(v.total)}
-                </div>
+                <div className="row-amount">{formatMoneda(v.total)}</div>
               </div>
             ))}
           </div>

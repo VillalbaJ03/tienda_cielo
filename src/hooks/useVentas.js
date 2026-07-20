@@ -4,7 +4,6 @@ import {
   crearVenta,
   obtenerVentasDelDia,
   obtenerDetallesVenta,
-  obtenerTodosProductos,
 } from '../db/database';
 
 export default function useVentas() {
@@ -92,7 +91,7 @@ export default function useVentas() {
         cantidad: item.cantidad,
         precio_unitario: item.precio_unitario,
       }));
-      const ventaId = await crearVenta(ventaData, detalles);
+      const ventaId = await crearVenta(ventaData, detalles, metodo === 'fiado' ? clienteId : null);
       setCarrito([]);
       setMontoPago('');
       setBusqueda('');

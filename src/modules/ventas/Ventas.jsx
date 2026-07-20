@@ -12,10 +12,14 @@ import {
   X,
   Check,
   History,
+  ScanLine,
 } from 'lucide-react';
 import useVentas from '../../hooks/useVentas';
 import useFiados from '../../hooks/useFiados';
+import db from '../../db/database';
 import { formatMoneda, METODOS_PAGO } from '../../utils/formatters';
+import { toast } from '../../ui/dialogos';
+import EscanerBarras from '../../components/EscanerBarras';
 
 export default function Ventas() {
   const {
@@ -28,6 +32,7 @@ export default function Ventas() {
 
   const { clientes } = useFiados();
   const [showPago, setShowPago] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [clienteFiado, setClienteFiado] = useState('');
   const [ventaExitosa, setVentaExitosa] = useState(false);
   const inputRef = useRef(null);
@@ -43,8 +48,23 @@ export default function Ventas() {
       setClienteFiado('');
       setVentaExitosa(true);
       setTimeout(() => setVentaExitosa(false), 2500);
-    } catch (error) {
-      alert('Error al procesar la venta');
+    } catch {
+      toast('Error al procesar la venta', 'error');
+    }
+  }
+
+  async function handleCodigoEscaneado(codigo) {
+    setShowScanner(false);
+    try {
+      const producto = await db.productos.where('codigo').equals(codigo).first();
+      if (producto && producto.activo !== false) {
+        agregarAlCarrito(producto);
+        toast(`${producto.nombre} agregado`);
+      } else {
+        toast(`No hay ningún producto con el código ${codigo}`, 'error');
+      }
+    } catch {
+      toast('Error al buscar el producto', 'error');
     }
   }
 
@@ -57,159 +77,177 @@ export default function Ventas() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Punto de Venta</h1>
+        <h1 className="page-title">Punto de venta</h1>
         <Link to="/historial-ventas" className="btn btn-secondary btn-sm">
-          <History size={13} /> Historial
+          <History size={14} /> Historial
         </Link>
       </div>
 
       {ventaExitosa && (
-        <div className="toast-success" style={{ marginBottom: '0.75rem' }}>
-          <Check size={16} /> ¡Venta registrada con éxito!
+        <div className="notice notice-success animate-fade-in" style={{ marginBottom: '0.75rem' }}>
+          <Check size={15} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+          Venta registrada con éxito
         </div>
       )}
 
-      {/* Search */}
-      <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
-        <div style={{ position: 'relative' }}>
-          <Search size={16} style={{
-            position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)',
-            color: 'var(--color-text-muted)', pointerEvents: 'none',
-          }} />
-          <input
-            ref={inputRef}
-            type="text"
-            className="input"
-            placeholder="Buscar producto por nombre o código..."
-            value={busqueda}
-            onChange={(e) => buscar(e.target.value)}
-            style={{ paddingLeft: '2.4rem' }}
-          />
+      {/* Buscador */}
+      <div style={{ position: 'relative', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="search-wrap" style={{ flex: 1 }}>
+            <Search size={15} />
+            <input
+              ref={inputRef}
+              type="text"
+              className="input"
+              placeholder="Buscar producto por nombre o código"
+              value={busqueda}
+              onChange={(e) => buscar(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowScanner(true)}
+            aria-label="Escanear código de barras"
+            style={{ flexShrink: 0, padding: '0 0.75rem' }}
+          >
+            <ScanLine size={16} />
+          </button>
         </div>
 
         {resultados.length > 0 && (
-          <div className="animate-fade-in" style={{
-            position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 30,
-            background: '#fff', border: '1px solid var(--color-border)', borderRadius: '0.625rem',
-            maxHeight: '240px', overflowY: 'auto', boxShadow: 'var(--shadow-lg)',
-          }}>
-            {resultados.map((p, i) => (
-              <button key={p.id} onClick={() => agregarAlCarrito(p)} style={{
-                width: '100%', padding: '0.6rem 0.875rem', display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', background: 'transparent', border: 'none',
-                borderBottom: i < resultados.length - 1 ? '1px solid var(--color-border)' : 'none',
-                color: 'var(--color-text-primary)', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left',
-              }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <div>
-                  <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-                    Stock: {p.stock} · {p.codigo || 'Sin código'}
-                  </div>
+          <div className="search-results animate-fade-in">
+            {resultados.map((p) => (
+              <button key={p.id} className="search-result" onClick={() => agregarAlCarrito(p)}>
+                <div style={{ minWidth: 0 }}>
+                  <div className="row-title">{p.nombre}</div>
+                  <div className="row-meta">Stock: {p.stock}{p.codigo ? ` · ${p.codigo}` : ''}</div>
                 </div>
-                <span style={{ fontWeight: 700, color: 'var(--color-accent)' }}>{formatMoneda(p.precio_venta)}</span>
+                <span className="row-amount">{formatMoneda(p.precio_venta)}</span>
               </button>
             ))}
           </div>
         )}
       </div>
 
-      {/* Cart */}
+      {/* Carrito */}
       {carrito.length === 0 ? (
         <div className="empty-state">
-          <ShoppingCart size={40} />
+          <ShoppingCart size={32} strokeWidth={1.5} />
           <p>Busca un producto para comenzar</p>
         </div>
       ) : (
         <>
-          <div className="card" style={{ padding: 0, marginBottom: '0.75rem' }}>
-            {carrito.map((item, i) => (
-              <div key={item.producto_id} className="list-item" style={{ padding: '0.6rem 0.875rem' }}>
+          <div className="card" style={{ marginBottom: '0.75rem' }}>
+            {carrito.map((item) => (
+              <div key={item.producto_id} className="list-row" style={{ padding: '0.65rem 0.875rem' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nombre}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>{formatMoneda(item.precio_unitario)} c/u</div>
+                  <div className="row-title" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {item.nombre}
+                  </div>
+                  <div className="row-meta num">{formatMoneda(item.precio_unitario)} c/u</div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.15rem', background: '#f1f5f9', borderRadius: '0.5rem', padding: '0.15rem' }}>
-                  <button className="btn btn-ghost" style={{ padding: '0.2rem', borderRadius: '0.35rem' }}
-                    onClick={() => actualizarCantidad(item.producto_id, item.cantidad - 1)}>
+                <div className="stepper">
+                  <button onClick={() => actualizarCantidad(item.producto_id, item.cantidad - 1)} aria-label="Restar">
                     <Minus size={13} />
                   </button>
-                  <span style={{ fontWeight: 700, minWidth: '22px', textAlign: 'center', fontSize: '0.88rem' }}>{item.cantidad}</span>
-                  <button className="btn btn-ghost" style={{ padding: '0.2rem', borderRadius: '0.35rem' }}
-                    onClick={() => actualizarCantidad(item.producto_id, item.cantidad + 1)}>
+                  <span>{item.cantidad}</span>
+                  <button onClick={() => actualizarCantidad(item.producto_id, item.cantidad + 1)} aria-label="Sumar">
                     <Plus size={13} />
                   </button>
                 </div>
 
-                <span style={{ fontWeight: 700, minWidth: '55px', textAlign: 'right', fontSize: '0.88rem' }}>{formatMoneda(item.subtotal)}</span>
+                <span className="row-amount" style={{ minWidth: '58px' }}>{formatMoneda(item.subtotal)}</span>
 
-                <button onClick={() => quitarDelCarrito(item.producto_id)}
-                  className="btn btn-ghost" style={{ padding: '0.2rem', color: 'var(--color-danger)' }}>
-                  <Trash2 size={14} />
+                <button
+                  onClick={() => quitarDelCarrito(item.producto_id)}
+                  className="icon-btn is-danger"
+                  aria-label="Quitar del carrito"
+                >
+                  <Trash2 size={15} />
                 </button>
               </div>
             ))}
           </div>
 
           {/* Total */}
-          <div className="card" style={{
-            background: '#ecfdf5', borderColor: '#a7f3d0',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#065f46' }}>Total a cobrar</span>
-              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: '#059669', letterSpacing: '-0.02em' }}>{formatMoneda(total)}</span>
+          <div className="card card-pad">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.875rem' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-ink-3)' }}>Total a cobrar</span>
+              <span className="stat-hero" style={{ fontSize: '1.5rem' }}>{formatMoneda(total)}</span>
             </div>
-            <div style={{ display: 'flex', gap: '0.4rem' }}>
-              <button className="btn btn-secondary btn-sm" onClick={limpiarCarrito} style={{ flexShrink: 0 }}>
-                <Trash2 size={13} />
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={limpiarCarrito} aria-label="Vaciar carrito" style={{ flexShrink: 0, padding: '0 0.75rem' }}>
+                <Trash2 size={15} />
               </button>
               <button className="btn btn-primary btn-block" onClick={() => setShowPago(true)}>
-                Cobrar {formatMoneda(total)}
+                Cobrar
               </button>
             </div>
           </div>
         </>
       )}
 
-      {/* Payment Modal */}
+      {showScanner && (
+        <EscanerBarras
+          onDetectado={handleCodigoEscaneado}
+          onCerrar={() => setShowScanner(false)}
+        />
+      )}
+
+      {/* Modal de pago */}
       {showPago && (
         <div className="modal-overlay" onClick={() => setShowPago(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Método de Pago</h2>
-              <button className="btn btn-ghost" onClick={() => setShowPago(false)}><X size={18} /></button>
+            <div className="modal-header">
+              <h2 className="modal-title">Cobrar venta</h2>
+              <button className="icon-btn" onClick={() => setShowPago(false)} aria-label="Cerrar">
+                <X size={17} />
+              </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.35rem', marginBottom: '1rem' }}>
-              {METODOS_PAGO.map((m) => (
-                <button key={m.value}
-                  className={`btn ${metodoPago === m.value ? 'btn-primary' : 'btn-secondary'} btn-sm`}
-                  onClick={() => setMetodoPago(m.value)} style={{ flex: 1 }}>
-                  {iconoPago[m.value]} {m.label}
-                </button>
-              ))}
+            <div className="field">
+              <label className="label">Método de pago</label>
+              <div className="seg">
+                {METODOS_PAGO.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    className={`seg-item ${metodoPago === m.value ? 'is-active' : ''}`}
+                    onClick={() => setMetodoPago(m.value)}
+                  >
+                    {iconoPago[m.value]} {m.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {metodoPago === 'efectivo' && (
-              <div style={{ marginBottom: '1rem' }}>
+              <div className="field">
                 <label className="label">Monto recibido</label>
-                <input type="number" className="input" placeholder="0.00" value={montoPago}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className="input input-amount"
+                  placeholder="0.00"
+                  value={montoPago}
                   onChange={(e) => setMontoPago(e.target.value)}
-                  style={{ fontSize: '1.2rem', fontWeight: 800, textAlign: 'center' }} />
+                />
                 {montoPago && (
-                  <div style={{ marginTop: '0.5rem', textAlign: 'center', fontSize: '1rem', fontWeight: 700,
-                    color: vuelto >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                  <p className="form-hint num" style={{
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    color: vuelto >= 0 ? 'var(--color-positive)' : 'var(--color-danger)',
+                  }}>
                     Vuelto: {formatMoneda(Math.max(0, vuelto))}
-                  </div>
+                  </p>
                 )}
               </div>
             )}
 
             {metodoPago === 'fiado' && (
-              <div style={{ marginBottom: '1rem' }}>
+              <div className="field">
                 <label className="label">Cliente</label>
                 <select className="input" value={clienteFiado} onChange={(e) => setClienteFiado(e.target.value)}>
                   <option value="">Seleccionar cliente...</option>
@@ -218,18 +256,18 @@ export default function Ventas() {
               </div>
             )}
 
-            <div style={{
-              textAlign: 'center', padding: '1rem', background: '#ecfdf5', borderRadius: '0.875rem',
-              marginBottom: '1rem', border: '1px solid #a7f3d0',
-            }}>
-              <div style={{ fontSize: '0.65rem', color: '#065f46', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total</div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: '#059669' }}>{formatMoneda(total)}</div>
+            <div className="divider" />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-ink-3)' }}>Total</span>
+              <span className="stat-hero" style={{ fontSize: '1.5rem' }}>{formatMoneda(total)}</span>
             </div>
 
-            <button className="btn btn-primary btn-block" onClick={handleCompletarVenta}
+            <button
+              className="btn btn-primary btn-block"
+              onClick={handleCompletarVenta}
               disabled={loading || (metodoPago === 'fiado' && !clienteFiado)}
-              style={{ padding: '0.75rem' }}>
-              <Check size={16} /> {loading ? 'Procesando...' : 'Confirmar Venta'}
+            >
+              {loading ? 'Procesando...' : 'Confirmar venta'}
             </button>
           </div>
         </div>

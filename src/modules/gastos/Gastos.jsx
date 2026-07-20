@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Receipt, Plus, Calendar, X, Save } from 'lucide-react';
+import { Receipt, Plus, X } from 'lucide-react';
 import { agregarGasto, obtenerGastosDelDia, obtenerGastosDelMes } from '../../db/database';
 import { formatMoneda, formatFechaHora, CATEGORIAS_GASTOS } from '../../utils/formatters';
+import { toast } from '../../ui/dialogos';
 
 export default function Gastos() {
   const [gastosHoy, setGastosHoy] = useState([]);
@@ -23,12 +24,14 @@ export default function Gastos() {
 
   async function handleGuardar(e) {
     e.preventDefault();
-    if (!form.monto || !form.descripcion) { alert('La descripción y el monto son obligatorios'); return; }
+    if (!form.monto || !form.descripcion) { toast('La descripción y el monto son obligatorios', 'error'); return; }
     setGuardando(true);
     try {
       await agregarGasto({ categoria: form.categoria, descripcion: form.descripcion, monto: parseFloat(form.monto) });
-      setForm({ categoria: 'Otros', descripcion: '', monto: '' }); setShowForm(false); await cargarGastos();
-    } catch (error) { alert('Error al registrar gasto');
+      setForm({ categoria: 'Otros', descripcion: '', monto: '' }); setShowForm(false);
+      toast('Gasto registrado');
+      await cargarGastos();
+    } catch { toast('Error al registrar gasto', 'error');
     } finally { setGuardando(false); }
   }
 
@@ -40,39 +43,39 @@ export default function Gastos() {
       <div className="page-header">
         <h1 className="page-title">Gastos</h1>
         <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)}>
-          <Plus size={13} /> Nuevo
+          <Plus size={14} /> Nuevo
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem' }}>
-        <button className={`btn ${vista === 'hoy' ? 'btn-primary' : 'btn-secondary'} btn-sm`} onClick={() => setVista('hoy')} style={{ flex: 1 }}>Hoy</button>
-        <button className={`btn ${vista === 'mes' ? 'btn-primary' : 'btn-secondary'} btn-sm`} onClick={() => setVista('mes')} style={{ flex: 1 }}>
-          <Calendar size={13} /> Mes
-        </button>
+      <div className="seg" style={{ marginBottom: '1rem' }}>
+        <button className={`seg-item ${vista === 'hoy' ? 'is-active' : ''}`} onClick={() => setVista('hoy')}>Hoy</button>
+        <button className={`seg-item ${vista === 'mes' ? 'is-active' : ''}`} onClick={() => setVista('mes')}>Este mes</button>
       </div>
 
-      <div className="stat-card red" style={{ marginBottom: '1rem', textAlign: 'center' }}>
-        <div className="stat-label" style={{ justifyContent: 'center' }}>Total {vista === 'hoy' ? 'de hoy' : 'del mes'}</div>
-        <div className="stat-value" style={{ color: 'var(--color-danger)', fontSize: '1.5rem' }}>{formatMoneda(totalActivo)}</div>
-        <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: '0.15rem' }}>
-          {gastosActivos.length} gasto{gastosActivos.length !== 1 ? 's' : ''}
+      <div className="stat-tile section">
+        <div className="stat-label">
+          Total {vista === 'hoy' ? 'de hoy' : 'del mes'} · {gastosActivos.length} gasto{gastosActivos.length !== 1 ? 's' : ''}
         </div>
+        <div className="stat-hero">{formatMoneda(totalActivo)}</div>
       </div>
 
       {gastosActivos.length === 0 ? (
-        <div className="empty-state"><Receipt size={44} /><p>No hay gastos {vista === 'hoy' ? 'hoy' : 'este mes'}</p></div>
+        <div className="empty-state">
+          <Receipt size={32} strokeWidth={1.5} />
+          <p>No hay gastos {vista === 'hoy' ? 'hoy' : 'este mes'}</p>
+        </div>
       ) : (
-        <div className="stagger" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        <div className="card">
           {gastosActivos.map((g) => (
-            <div key={g.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem 1rem' }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{g.descripcion}</div>
-                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.15rem' }}>
-                  <span className="badge badge-blue">{g.categoria}</span>
-                  <span style={{ fontSize: '0.68rem', color: 'var(--color-text-muted)' }}>{formatFechaHora(g.fecha)}</span>
+            <div key={g.id} className="list-row">
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="row-title">{g.descripcion}</div>
+                <div className="row-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span className="badge badge-neutral">{g.categoria}</span>
+                  {formatFechaHora(g.fecha)}
                 </div>
               </div>
-              <div style={{ fontWeight: 700, color: 'var(--color-danger)', fontSize: '0.95rem' }}>-{formatMoneda(g.monto)}</div>
+              <div className="row-amount">−{formatMoneda(g.monto)}</div>
             </div>
           ))}
         </div>
@@ -81,30 +84,35 @@ export default function Gastos() {
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Nuevo Gasto</h2>
-              <button className="btn btn-ghost" onClick={() => setShowForm(false)}><X size={18} /></button>
+            <div className="modal-header">
+              <h2 className="modal-title">Nuevo gasto</h2>
+              <button className="icon-btn" onClick={() => setShowForm(false)} aria-label="Cerrar">
+                <X size={17} />
+              </button>
             </div>
             <form onSubmit={handleGuardar}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                <div>
-                  <label className="label">Categoría</label>
-                  <select className="input" value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}>
-                    {CATEGORIAS_GASTOS.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="label">Descripción *</label>
-                  <input className="input" placeholder="Ej: Pago de luz" value={form.descripcion} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} required />
-                </div>
-                <div>
-                  <label className="label">Monto ($) *</label>
-                  <input type="number" step="0.01" className="input" placeholder="0.00" value={form.monto} onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
-                    style={{ fontSize: '1.3rem', fontWeight: 800, textAlign: 'center' }} required />
-                </div>
+              <div className="field">
+                <label className="label">Categoría</label>
+                <select className="input" value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}>
+                  {CATEGORIAS_GASTOS.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
-              <button type="submit" className="btn btn-primary btn-block" disabled={guardando} style={{ marginTop: '1.25rem' }}>
-                <Save size={15} /> {guardando ? 'Guardando...' : 'Registrar Gasto'}
+              <div className="field">
+                <label className="label">Descripción *</label>
+                <input className="input" placeholder="Ej: Pago de luz" value={form.descripcion} onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))} required />
+              </div>
+              <div className="field">
+                <label className="label">Monto ($) *</label>
+                <input
+                  type="number" step="0.01" inputMode="decimal"
+                  className="input input-amount" placeholder="0.00"
+                  value={form.monto}
+                  onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary btn-block" disabled={guardando} style={{ marginTop: '0.5rem' }}>
+                {guardando ? 'Guardando...' : 'Registrar gasto'}
               </button>
             </form>
           </div>

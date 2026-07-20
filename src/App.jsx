@@ -5,12 +5,13 @@ import Ventas from './modules/ventas/Ventas';
 import HistorialVentas from './modules/ventas/HistorialVentas';
 import Inventario from './modules/inventario/Inventario';
 import FormProducto from './modules/inventario/FormProducto';
+import ImportarProductos from './modules/inventario/ImportarProductos';
 import Caja from './modules/caja/Caja';
 import Fiados from './modules/fiados/Fiados';
 import FormFiado from './modules/fiados/FormFiado';
+import Clientes from './modules/clientes/Clientes';
 import Gastos from './modules/gastos/Gastos';
 import Proveedores from './modules/proveedores/Proveedores';
-import MasMenu from './components/MasMenu';
 
 export default function App() {
   return (
@@ -22,13 +23,14 @@ export default function App() {
           <Route path="/historial-ventas" element={<HistorialVentas />} />
           <Route path="/inventario" element={<Inventario />} />
           <Route path="/inventario/nuevo" element={<FormProducto />} />
+          <Route path="/inventario/importar" element={<ImportarProductos />} />
           <Route path="/inventario/editar/:id" element={<FormProducto />} />
           <Route path="/caja" element={<Caja />} />
           <Route path="/fiados" element={<Fiados />} />
           <Route path="/fiados/nuevo" element={<FormFiado />} />
+          <Route path="/clientes" element={<Clientes />} />
           <Route path="/gastos" element={<Gastos />} />
           <Route path="/proveedores" element={<Proveedores />} />
-          <Route path="/mas" element={<MasMenu />} />
         </Route>
       </Routes>
     </BrowserRouter>
