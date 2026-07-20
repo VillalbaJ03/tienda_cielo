@@ -2,6 +2,12 @@
 
 Registro cronológico de lo que se ha hecho en Tienda Cielo. La visión y lo que falta está en [ROADMAP.md](ROADMAP.md); las reglas visuales en [DISENO.md](DISENO.md).
 
+## 2026-07-19 — Publicación web + pull request
+
+- **Deploy a Firebase Hosting**: https://tienda-cielo-94466.web.app ya sirve la v2 (antes tenía la versión inicial sin PWA ni sync funcional). `firebase deploy --only hosting` con `firebase.json`/`.firebaserc` en el repo; verificado en producción con el chip "Sincronizado" contra la base real. Con HTTPS, el escáner de cámara funciona desde el teléfono.
+- **PR #1** abierto con todo el trabajo: https://github.com/VillalbaJ03/tienda_cielo/pull/1 (rama `feat/v2-sync-rediseno-modulos`, commits temáticos).
+- Nota de despliegue: tras cambiar código, publicar con `npm run build` + `firebase deploy --only hosting`.
+
 ## 2026-07-16 — Escáner de barras, importación CSV y vista de escritorio
 
 - **Escáner de código de barras con la cámara** (`EscanerBarras.jsx`): usa la API nativa `BarcodeDetector` cuando existe y cae a ZXing (carga bajo demanda) en el resto. Requiere HTTPS o localhost.
