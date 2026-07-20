@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Trash2, ScanLine } from 'lucide-react';
+import { ArrowLeft, Trash2, ScanLine, Camera } from 'lucide-react';
 import useInventario from '../../hooks/useInventario';
 import { obtenerProveedores } from '../../db/database';
 import db from '../../db/database';
@@ -23,6 +23,8 @@ export default function FormProducto() {
   const [inactivo, setInactivo] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [busquedaFallida, setBusquedaFallida] = useState('');
+  const [identificando, setIdentificando] = useState(false);
+  const fotoRef = useRef(null);
   const esEdicion = !!id;
 
   const cargarDatos = useCallback(async () => {
@@ -48,6 +50,45 @@ export default function FormProducto() {
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
   function handleChange(e) { setForm((prev) => ({ ...prev, [e.target.name]: e.target.value })); }
+
+  // Reduce la foto (máx. 1024 px, JPEG) antes de enviarla a la IA
+  async function comprimirImagen(archivo, maxDim = 1024) {
+    const bitmap = await createImageBitmap(archivo);
+    const escala = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * escala);
+    canvas.height = Math.round(bitmap.height * escala);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  }
+
+  async function handleFoto(e) {
+    const archivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!archivo) return;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) { toast('Configura Supabase para usar la identificación por foto', 'error'); return; }
+    setIdentificando(true);
+    try {
+      const imagen = await comprimirImagen(archivo);
+      const res = await fetch(`${supabaseUrl}/functions/v1/reconocer-producto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imagen }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.nombre) {
+        setForm((prev) => ({ ...prev, nombre: data.nombre }));
+        toast(`Identificado: ${data.nombre}`);
+      } else if (res.ok) {
+        toast('No se distinguió ningún producto en la foto', 'error');
+      } else {
+        toast(data.error || 'La identificación por foto aún no está activa', 'error');
+      }
+    } catch {
+      toast('No se pudo procesar la foto', 'error');
+    } finally { setIdentificando(false); }
+  }
 
   // Catálogos abiertos y gratuitos, en orden de probabilidad:
   // alimentos → productos generales (limpieza, etc.) → cuidado personal
@@ -151,7 +192,22 @@ export default function FormProducto() {
       <form onSubmit={handleSubmit} className="card card-pad">
         <div className="field">
           <label className="label">Nombre *</label>
-          <input className="input" name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej: Coca Cola 500 ml" required />
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input className="input" name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej: Coca Cola 500 ml" required />
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => fotoRef.current?.click()}
+              disabled={identificando}
+              aria-label="Identificar por foto"
+              title="Tomar foto del empaque e identificarlo con IA"
+              style={{ flexShrink: 0, padding: '0 0.75rem' }}
+            >
+              <Camera size={16} />
+            </button>
+            <input ref={fotoRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFoto} />
+          </div>
+          {identificando && <p className="form-hint">Identificando el producto con IA...</p>}
         </div>
         <div className="field">
           <label className="label">Código / barcode</label>
