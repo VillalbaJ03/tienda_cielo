@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { DoorOpen, DoorClosed } from 'lucide-react';
 import { abrirCaja, cerrarCaja, obtenerCajaDelDia, obtenerVentasDelDia, obtenerGastosDelDia } from '../../db/database';
-import { formatMoneda, formatFechaHora } from '../../utils/formatters';
+import { formatMoneda, formatFechaHora, parseNumero } from '../../utils/formatters';
 import { toast, confirmar } from '../../ui/dialogos';
 
 export default function Caja() {
@@ -26,7 +26,7 @@ export default function Caja() {
   }
 
   async function handleAbrirCaja() {
-    const monto = parseFloat(montoApertura);
+    const monto = parseNumero(montoApertura);
     if (isNaN(monto) || monto < 0) { toast('Ingresa un monto válido', 'error'); return; }
     try { await abrirCaja(monto); setMontoApertura(''); toast('Caja abierta'); await cargarCaja(); }
     catch (error) { toast(error.message, 'error'); }
@@ -74,8 +74,8 @@ export default function Caja() {
           </p>
           <div style={{ maxWidth: '220px', margin: '0 auto 1rem' }}>
             <input
-              type="number" step="0.01" inputMode="decimal"
-              className="input input-amount" placeholder="0.00"
+              type="text" inputMode="decimal"
+              className="input input-amount" placeholder="0,00"
               value={montoApertura}
               onChange={(e) => setMontoApertura(e.target.value)}
             />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Receipt, Plus, X } from 'lucide-react';
 import { agregarGasto, obtenerGastosDelDia, obtenerGastosDelMes } from '../../db/database';
-import { formatMoneda, formatFechaHora, CATEGORIAS_GASTOS } from '../../utils/formatters';
+import { formatMoneda, formatFechaHora, parseNumero, CATEGORIAS_GASTOS } from '../../utils/formatters';
 import { toast } from '../../ui/dialogos';
 
 export default function Gastos() {
@@ -24,10 +24,10 @@ export default function Gastos() {
 
   async function handleGuardar(e) {
     e.preventDefault();
-    if (!form.monto || !form.descripcion) { toast('La descripción y el monto son obligatorios', 'error'); return; }
+    if (!(parseNumero(form.monto) > 0) || !form.descripcion) { toast('La descripción y el monto son obligatorios', 'error'); return; }
     setGuardando(true);
     try {
-      await agregarGasto({ categoria: form.categoria, descripcion: form.descripcion, monto: parseFloat(form.monto) });
+      await agregarGasto({ categoria: form.categoria, descripcion: form.descripcion, monto: parseNumero(form.monto) });
       setForm({ categoria: 'Otros', descripcion: '', monto: '' }); setShowForm(false);
       toast('Gasto registrado');
       await cargarGastos();
@@ -104,8 +104,8 @@ export default function Gastos() {
               <div className="field">
                 <label className="label">Monto ($) *</label>
                 <input
-                  type="number" step="0.01" inputMode="decimal"
-                  className="input input-amount" placeholder="0.00"
+                  type="text" inputMode="decimal"
+                  className="input input-amount" placeholder="0,00"
                   value={form.monto}
                   onChange={(e) => setForm((f) => ({ ...f, monto: e.target.value }))}
                   required

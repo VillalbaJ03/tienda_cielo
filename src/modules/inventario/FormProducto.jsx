@@ -4,7 +4,7 @@ import { ArrowLeft, Trash2, ScanLine, Camera } from 'lucide-react';
 import useInventario from '../../hooks/useInventario';
 import { obtenerProveedores } from '../../db/database';
 import db from '../../db/database';
-import { CATEGORIAS_PRODUCTOS } from '../../utils/formatters';
+import { CATEGORIAS_PRODUCTOS, parseNumero } from '../../utils/formatters';
 import { toast, confirmar } from '../../ui/dialogos';
 import EscanerBarras from '../../components/EscanerBarras';
 
@@ -135,12 +135,12 @@ export default function FormProducto() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.nombre || !form.precio_venta) { toast('El nombre y el precio de venta son obligatorios', 'error'); return; }
+    if (!form.nombre || !(parseNumero(form.precio_venta) > 0)) { toast('El nombre y el precio de venta son obligatorios', 'error'); return; }
     setGuardando(true);
     try {
       const datos = {
         nombre: form.nombre, codigo: form.codigo,
-        precio_compra: parseFloat(form.precio_compra) || 0, precio_venta: parseFloat(form.precio_venta) || 0,
+        precio_compra: parseNumero(form.precio_compra) || 0, precio_venta: parseNumero(form.precio_venta) || 0,
         stock: parseInt(form.stock) || 0, stock_minimo: parseInt(form.stock_minimo) || 5,
         categoria: form.categoria, proveedor_id: form.proveedor_id ? parseInt(form.proveedor_id) : null,
       };
@@ -175,7 +175,7 @@ export default function FormProducto() {
   }
 
   const ganancia = form.precio_compra && form.precio_venta
-    ? (parseFloat(form.precio_venta) - parseFloat(form.precio_compra))
+    ? (parseNumero(form.precio_venta) - parseNumero(form.precio_compra))
     : null;
 
   return (
@@ -237,11 +237,11 @@ export default function FormProducto() {
         <div className="field field-row">
           <div>
             <label className="label">Precio compra ($)</label>
-            <input type="number" step="0.01" inputMode="decimal" className="input num" name="precio_compra" value={form.precio_compra} onChange={handleChange} placeholder="0.00" />
+            <input type="text" inputMode="decimal" className="input num" name="precio_compra" value={form.precio_compra} onChange={handleChange} placeholder="0,00" />
           </div>
           <div>
             <label className="label">Precio venta ($) *</label>
-            <input type="number" step="0.01" inputMode="decimal" className="input num" name="precio_venta" value={form.precio_venta} onChange={handleChange} placeholder="0.00" required />
+            <input type="text" inputMode="decimal" className="input num" name="precio_venta" value={form.precio_venta} onChange={handleChange} placeholder="0,00" required />
           </div>
         </div>
 
@@ -251,7 +251,7 @@ export default function FormProducto() {
             color: ganancia > 0 ? 'var(--color-positive)' : 'var(--color-danger)',
           }}>
             Ganancia: ${ganancia.toFixed(2)} por unidad
-            {parseFloat(form.precio_compra) > 0 && ` · ${((ganancia / parseFloat(form.precio_compra)) * 100).toFixed(0)}%`}
+            {parseNumero(form.precio_compra) > 0 && ` · ${((ganancia / parseNumero(form.precio_compra)) * 100).toFixed(0)}%`}
           </p>
         )}
 

@@ -2,6 +2,13 @@
 
 Registro cronológico de lo que se ha hecho en Tienda Cielo. La visión y lo que falta está en [ROADMAP.md](ROADMAP.md); las reglas visuales en [DISENO.md](DISENO.md).
 
+## 2026-07-20 — Decimales con coma en todos los montos
+
+- Los campos de dinero rechazaban la coma (Ecuador escribe "0,75"): eran `type="number"`, que la descarta y pierde el valor.
+- Helper `parseNumero()` en formatters: acepta coma o punto. Todos los campos de monto pasaron a `type="text"` + `inputMode="decimal"` (teclado numérico en móvil, con coma) y usan `parseNumero` al guardar y en cálculos en vivo (ganancia, vuelto).
+- Cubre: precios de producto, monto recibido en venta, gasto, abono de fiado, límite de crédito, monto de fiado y apertura de caja. La importación CSV ya normalizaba coma.
+- Verificado: escribir "0,75" guarda 0.75 en la base; ganancia en vivo correcta.
+
 ## 2026-07-19 — Identificación de productos por foto con IA ✔
 
 - **Edge Function `reconocer-producto`** desplegada en Supabase (capa gratuita, 500K invocaciones/mes): recibe la foto del empaque (JPEG base64, comprimida a 1024px en el cliente) y consulta **Gemini** con el alias `gemini-flash-latest` (siempre el modelo vigente). La API key vive en el secreto `GEMINI_API_KEY` del proyecto, nunca en el frontend.

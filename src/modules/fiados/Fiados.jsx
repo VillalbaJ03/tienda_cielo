@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import useFiados from '../../hooks/useFiados';
-import { formatMoneda, formatFechaHora } from '../../utils/formatters';
+import { formatMoneda, formatFechaHora, parseNumero } from '../../utils/formatters';
 import { toast } from '../../ui/dialogos';
 
 export default function Fiados() {
@@ -13,7 +13,7 @@ export default function Fiados() {
 
   async function handlePago() {
     if (!fiadoSeleccionado || !montoPago) return;
-    const monto = parseFloat(montoPago);
+    const monto = parseNumero(montoPago);
     if (isNaN(monto) || monto <= 0) { toast('Ingresa un monto válido', 'error'); return; }
     try {
       await registrarPago(fiadoSeleccionado, monto);
@@ -112,8 +112,8 @@ export default function Fiados() {
             <div className="field">
               <label className="label">Monto del abono</label>
               <input
-                type="number" step="0.01" inputMode="decimal"
-                className="input input-amount" placeholder="0.00"
+                type="text" inputMode="decimal"
+                className="input input-amount" placeholder="0,00"
                 value={montoPago}
                 onChange={(e) => setMontoPago(e.target.value)}
               />

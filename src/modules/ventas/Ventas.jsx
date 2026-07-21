@@ -227,10 +227,10 @@ export default function Ventas() {
               <div className="field">
                 <label className="label">Monto recibido</label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
                   className="input input-amount"
-                  placeholder="0.00"
+                  placeholder="0,00"
                   value={montoPago}
                   onChange={(e) => setMontoPago(e.target.value)}
                 />

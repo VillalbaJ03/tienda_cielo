@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, UserPlus, CreditCard } from 'lucide-react';
 import useFiados from '../../hooks/useFiados';
-import { formatMoneda } from '../../utils/formatters';
+import { formatMoneda, parseNumero } from '../../utils/formatters';
 import { toast } from '../../ui/dialogos';
 
 export default function FormFiado() {
@@ -32,7 +32,7 @@ export default function FormFiado() {
       await nuevoCliente({
         nombre,
         telefono,
-        limite_credito: parseFloat(limiteCredito) || 0,
+        limite_credito: parseNumero(limiteCredito) || 0,
       });
       setNombre('');
       setTelefono('');
@@ -48,13 +48,13 @@ export default function FormFiado() {
 
   async function handleCrearFiado(e) {
     e.preventDefault();
-    if (!clienteId || !montoFiado) {
+    if (!clienteId || !(parseNumero(montoFiado) > 0)) {
       toast('Selecciona un cliente e ingresa el monto', 'error');
       return;
     }
     setGuardando(true);
     try {
-      await nuevoFiado(parseInt(clienteId), parseFloat(montoFiado));
+      await nuevoFiado(parseInt(clienteId), parseNumero(montoFiado));
       toast('Fiado registrado');
       navigate('/fiados');
     } catch {
@@ -119,11 +119,10 @@ export default function FormFiado() {
           <div className="field">
             <label className="label">Límite de crédito ($)</label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
               inputMode="decimal"
               className="input num"
-              placeholder="0.00"
+              placeholder="0,00"
               value={limiteCredito}
               onChange={(e) => setLimiteCredito(e.target.value)}
             />
@@ -161,11 +160,10 @@ export default function FormFiado() {
           <div className="field">
             <label className="label">Monto del fiado ($) *</label>
             <input
-              type="number"
-              step="0.01"
+              type="text"
               inputMode="decimal"
               className="input input-amount"
-              placeholder="0.00"
+              placeholder="0,00"
               value={montoFiado}
               onChange={(e) => setMontoFiado(e.target.value)}
               required

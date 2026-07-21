@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, UserRound, X, Phone } from 'lucide-react';
 import { obtenerClientesTodos, agregarCliente, actualizarCliente } from '../../db/database';
-import { formatMoneda } from '../../utils/formatters';
+import { formatMoneda, parseNumero } from '../../utils/formatters';
 import { toast, confirmar } from '../../ui/dialogos';
 
 const formVacio = { nombre: '', telefono: '', limite_credito: '' };
@@ -58,7 +58,7 @@ export default function Clientes() {
       const datos = {
         nombre: form.nombre.trim(),
         telefono: form.telefono.trim(),
-        limite_credito: parseFloat(form.limite_credito) || 0,
+        limite_credito: parseNumero(form.limite_credito) || 0,
       };
       if (editando) await actualizarCliente(editando.id, datos);
       else await agregarCliente(datos);
@@ -173,7 +173,7 @@ export default function Clientes() {
               </div>
               <div className="field">
                 <label className="label">Límite de crédito ($)</label>
-                <input type="number" step="0.01" inputMode="decimal" className="input num" placeholder="0.00"
+                <input type="text" inputMode="decimal" className="input num" placeholder="0,00"
                   value={form.limite_credito}
                   onChange={(e) => setForm((f) => ({ ...f, limite_credito: e.target.value }))} />
               </div>

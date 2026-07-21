@@ -5,6 +5,7 @@ import {
   obtenerVentasDelDia,
   obtenerDetallesVenta,
 } from '../db/database';
+import { parseNumero } from '../utils/formatters';
 
 export default function useVentas() {
   const [carrito, setCarrito] = useState([]);
@@ -72,7 +73,7 @@ export default function useVentas() {
   }, []);
 
   const total = carrito.reduce((sum, item) => sum + item.subtotal, 0);
-  const vuelto = montoPago ? parseFloat(montoPago) - total : 0;
+  const vuelto = montoPago ? parseNumero(montoPago) - total : 0;
 
   const completarVenta = useCallback(async (metodo, clienteId) => {
     if (carrito.length === 0) return null;

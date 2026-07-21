@@ -1,4 +1,15 @@
 /**
+ * Convierte texto a número aceptando coma o punto como separador decimal.
+ * En Ecuador se escribe "0,75"; los inputs no deben perder ese valor.
+ * Devuelve NaN si no hay un número válido.
+ */
+export function parseNumero(valor) {
+  if (typeof valor === 'number') return valor;
+  if (valor == null || String(valor).trim() === '') return NaN;
+  return parseFloat(String(valor).trim().replace(',', '.'));
+}
+
+/**
  * Formatea un número como moneda (USD para Ecuador).
  */
 export function formatMoneda(valor) {
