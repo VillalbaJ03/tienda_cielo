@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Wallet, DoorOpen, DoorClosed, TrendingUp, TrendingDown, ArrowRightLeft } from 'lucide-react';
+import { DoorOpen, DoorClosed } from 'lucide-react';
 import { abrirCaja, cerrarCaja, obtenerCajaDelDia, obtenerVentasDelDia, obtenerGastosDelDia } from '../../db/database';
-import { formatMoneda, formatFechaHora } from '../../utils/formatters';
+import { formatMoneda, formatFechaHora, parseNumero } from '../../utils/formatters';
+import { toast, confirmar } from '../../ui/dialogos';
 
 export default function Caja() {
   const [caja, setCaja] = useState(null);
@@ -25,88 +26,93 @@ export default function Caja() {
   }
 
   async function handleAbrirCaja() {
-    const monto = parseFloat(montoApertura);
-    if (isNaN(monto) || monto < 0) { alert('Ingresa un monto válido'); return; }
-    try { await abrirCaja(monto); setMontoApertura(''); await cargarCaja(); }
-    catch (error) { alert(error.message); }
+    const monto = parseNumero(montoApertura);
+    if (isNaN(monto) || monto < 0) { toast('Ingresa un monto válido', 'error'); return; }
+    try { await abrirCaja(monto); setMontoApertura(''); toast('Caja abierta'); await cargarCaja(); }
+    catch (error) { toast(error.message, 'error'); }
   }
 
   async function handleCerrarCaja() {
-    try { await cerrarCaja(totalVentas, totalGastos); await cargarCaja(); }
-    catch (error) { alert(error.message); }
+    const ok = await confirmar({
+      titulo: '¿Cerrar la caja del día?',
+      mensaje: 'Se registrará el cierre con los totales actuales de ventas y gastos.',
+      textoConfirmar: 'Cerrar caja',
+      peligro: true,
+    });
+    if (!ok) return;
+    try { await cerrarCaja(totalVentas, totalGastos); toast('Caja cerrada'); await cargarCaja(); }
+    catch (error) { toast(error.message, 'error'); }
   }
 
-  if (loading) return <div className="empty-state"><div className="status-dot" style={{ width: 10, height: 10, background: 'var(--color-accent)' }} /><p>Cargando...</p></div>;
+  if (loading) return <div className="empty-state"><p>Cargando...</p></div>;
 
   const balance = totalVentas - totalGastos;
   const cajaFinal = caja ? caja.apertura + balance : 0;
 
+  const filas = caja ? [
+    { label: 'Apertura', texto: formatMoneda(caja.apertura) },
+    { label: 'Ventas del día', texto: formatMoneda(totalVentas) },
+    { label: 'Gastos del día', texto: `−${formatMoneda(totalGastos)}` },
+    { label: 'Balance', texto: formatMoneda(balance), color: balance < 0 ? 'var(--color-danger)' : 'var(--color-positive)' },
+  ] : [];
+
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">Caja Diaria</h1>
-        <span className={`badge ${caja && !caja.cierre ? 'badge-success' : 'badge-warning'}`}>
-          {caja && !caja.cierre ? '● Abierta' : '● Cerrada'}
+        <h1 className="page-title">Caja diaria</h1>
+        <span className={`badge ${caja && !caja.cierre ? 'badge-success' : 'badge-neutral'}`}>
+          {caja ? (caja.cierre ? 'Cerrada' : 'Abierta') : 'Sin abrir'}
         </span>
       </div>
 
       {!caja && (
-        <div className="card animate-slide-up" style={{ textAlign: 'center', padding: '2rem 1.25rem' }}>
-          <DoorOpen size={44} style={{ margin: '0 auto 1rem', opacity: 0.2, color: 'var(--color-accent)' }} />
-          <h2 style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.35rem' }}>Abrir Caja</h2>
-          <p style={{ fontSize: '0.82rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem' }}>
+        <div className="card card-pad" style={{ textAlign: 'center', padding: '2rem 1.25rem' }}>
+          <DoorOpen size={30} strokeWidth={1.5} style={{ margin: '0 auto 0.75rem', color: 'var(--color-ink-4)' }} />
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem' }}>Abrir caja</h2>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--color-ink-3)', marginBottom: '1.25rem' }}>
             Ingresa el monto con el que inicias el día
           </p>
-          <div style={{ maxWidth: '220px', margin: '0 auto 1.25rem' }}>
-            <input type="number" className="input" placeholder="0.00" step="0.01" value={montoApertura}
+          <div style={{ maxWidth: '220px', margin: '0 auto 1rem' }}>
+            <input
+              type="text" inputMode="decimal"
+              className="input input-amount" placeholder="0,00"
+              value={montoApertura}
               onChange={(e) => setMontoApertura(e.target.value)}
-              style={{ fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', letterSpacing: '-0.02em' }} />
+            />
           </div>
           <button className="btn btn-primary btn-block" onClick={handleAbrirCaja}>
-            <DoorOpen size={15} /> Abrir Caja
+            Abrir caja
           </button>
         </div>
       )}
 
       {caja && (
-        <div className="stagger">
-          <div className="stat-card green" style={{ marginBottom: '0.65rem', textAlign: 'center', padding: '1.25rem' }}>
-            <Wallet size={24} style={{ color: 'var(--color-accent)', margin: '0 auto 0.3rem', opacity: 0.6 }} />
-            <div className="stat-label" style={{ justifyContent: 'center' }}>Apertura</div>
-            <div className="stat-value">{formatMoneda(caja.apertura)}</div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem', marginBottom: '0.65rem' }}>
-            <div className="stat-card green">
-              <div className="stat-label"><TrendingUp size={12} color="var(--color-success)" /> Ventas</div>
-              <div className="stat-value" style={{ color: 'var(--color-success)' }}>{formatMoneda(totalVentas)}</div>
+        <>
+          <div className="card section">
+            {filas.map((f) => (
+              <div key={f.label} className="list-row" style={{ justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-ink-2)' }}>{f.label}</span>
+                <span className="row-amount" style={f.color ? { color: f.color } : undefined}>
+                  {f.texto}
+                </span>
+              </div>
+            ))}
+            <div className="list-row" style={{ justifyContent: 'space-between', background: '#fafafa', borderRadius: '0 0 12px 12px' }}>
+              <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Efectivo esperado</span>
+              <span className="stat-value" style={{ fontSize: '1.25rem' }}>{formatMoneda(cajaFinal)}</span>
             </div>
-            <div className="stat-card red">
-              <div className="stat-label"><TrendingDown size={12} color="var(--color-danger)" /> Gastos</div>
-              <div className="stat-value" style={{ color: 'var(--color-danger)' }}>{formatMoneda(totalGastos)}</div>
-            </div>
-          </div>
-
-          <div className="stat-card" style={{ marginBottom: '0.65rem' }}>
-            <div className="stat-label"><ArrowRightLeft size={12} color="var(--color-blue)" /> Balance del día</div>
-            <div className="stat-value" style={{ color: balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>{formatMoneda(balance)}</div>
-          </div>
-
-          <div className="stat-card green" style={{ textAlign: 'center', marginBottom: '1rem', padding: '1.25rem', borderColor: 'rgba(5,150,105,0.1)' }}>
-            <div className="stat-label" style={{ justifyContent: 'center' }}>Efectivo esperado</div>
-            <div className="stat-value" style={{ color: 'var(--color-accent)', fontSize: '1.6rem' }}>{formatMoneda(cajaFinal)}</div>
           </div>
 
           {!caja.cierre ? (
             <button className="btn btn-danger btn-block" onClick={handleCerrarCaja}>
-              <DoorClosed size={15} /> Cerrar Caja
+              <DoorClosed size={15} /> Cerrar caja
             </button>
           ) : (
-            <div style={{ textAlign: 'center', padding: '0.75rem', background: 'var(--color-warning-dim)', borderRadius: '0.75rem', color: 'var(--color-warning)', fontSize: '0.82rem', fontWeight: 600, border: '1px solid rgba(251,191,36,0.12)' }}>
+            <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--color-ink-3)' }}>
               Caja cerrada a las {formatFechaHora(caja.cierre)}
-            </div>
+            </p>
           )}
-        </div>
+        </>
       )}
     </div>
   );

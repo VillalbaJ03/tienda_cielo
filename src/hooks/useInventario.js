@@ -3,7 +3,6 @@ import {
   obtenerTodosProductos,
   agregarProducto,
   actualizarProducto,
-  buscarProductos,
   obtenerProductosBajoStock,
 } from '../db/database';
 
@@ -17,8 +16,7 @@ export default function useInventario() {
   const cargarProductos = useCallback(async () => {
     setLoading(true);
     try {
-      const todos = await obtenerTodosProductos();
-      setProductos(todos.filter((p) => p.activo !== false));
+      setProductos(await obtenerTodosProductos());
       const bajoStock = await obtenerProductosBajoStock();
       setProductosBajoStock(bajoStock);
     } catch (error) {
@@ -56,7 +54,16 @@ export default function useInventario() {
     }
   }, [cargarProductos]);
 
-  const productosFiltrados = productos.filter((p) => {
+  const reactivarProducto = useCallback(async (id) => {
+    try {
+      await actualizarProducto(id, { activo: true });
+      await cargarProductos();
+    } catch (error) {
+      console.error('Error al reactivar producto:', error);
+    }
+  }, [cargarProductos]);
+
+  const filtrar = (lista) => lista.filter((p) => {
     const matchCategoria = filtroCategoria === 'Todas' || p.categoria === filtroCategoria;
     const matchBusqueda =
       !busqueda ||
@@ -65,8 +72,14 @@ export default function useInventario() {
     return matchCategoria && matchBusqueda;
   });
 
+  const activos = productos.filter((p) => p.activo !== false);
+  const inactivos = productos.filter((p) => p.activo === false);
+
   return {
-    productos: productosFiltrados,
+    productos: filtrar(activos),
+    productosInactivos: filtrar(inactivos),
+    totalActivos: activos.length,
+    totalInactivos: inactivos.length,
     todosProductos: productos,
     productosBajoStock,
     filtroCategoria,
@@ -76,6 +89,7 @@ export default function useInventario() {
     setBusqueda,
     guardarProducto,
     desactivarProducto,
+    reactivarProducto,
     cargarProductos,
   };
 }

@@ -1,0 +1,13 @@
+services:
+  tienda-cielo:
+    build:
+      context: .
+      args:
+        # Se leen del .env en la raíz del proyecto (si existe).
+        # Sin ellas la app corre en modo solo-local, sin sincronización.
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+    container_name: tienda-cielo
+    ports:
+      - "8080:80"
+    restart: unless-stopped

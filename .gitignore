@@ -13,6 +13,11 @@ dist-ssr
 *.local
 .env
 .env.*
+!.env.example
+
+# Caché de herramientas de despliegue
+.firebase/
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*
